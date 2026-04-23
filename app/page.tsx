@@ -39,6 +39,8 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const resultsRef   = useRef<HTMLDivElement>(null)
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+  const apiSecret = process.env.NEXT_PUBLIC_API_SECRET || ''
   // ── File helpers ────────────────────────────────────────────────────────
 
   const loadFile = (file: File) => {
@@ -82,8 +84,11 @@ export default function Home() {
       form.append('file',       imageFile)
       form.append('image_type', IMAGE_TYPE_MAP[imageType])
 
-      const response = await fetch('http://127.0.0.1:8000/analyze', {
+      const response = await fetch(`${apiUrl}/analyze`, {
         method: 'POST',
+        headers: {
+          'X-API-Key': apiSecret
+        },
         body: form,
       })
 
