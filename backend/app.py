@@ -9,11 +9,13 @@ warnings.filterwarnings("ignore")
 from contextlib import asynccontextmanager
 from typing import Dict, Tuple
 
+import os
 import cv2
 import joblib
 import mediapipe as mp
 import numpy as np
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends, Security
+from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from mediapipe.tasks import python  # noqa: F401  (registers submodules)
 from mediapipe.tasks.python import vision
@@ -87,10 +89,19 @@ app = FastAPI(
     docs_url=None,
 )
 
+API_KEY = os.getenv("API_SECRET_KEY", "my-fallback-local-secret")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+
+async def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header != API_KEY:
+        raise HTTPException(status_code=403, detail="Could not validate API key")
+    return api_key_header
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # tighten this in production
-    allow_methods=["POST", "GET"],
+    allow_origins=["*"], # Change this to your frontend URL later for strict security
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -332,6 +343,7 @@ async def analyze(
         ...,
         description='Either "full_face" or "cropped_ocular"',
     ),
+    api_key: str = Depends(get_api_key),
 ):
     """
     Detect the ocular emotion in the uploaded image.
